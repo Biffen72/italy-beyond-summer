@@ -6,8 +6,17 @@ import { SupplierPicker } from "./SupplierPicker";
 import { ItineraryEditor } from "./ItineraryEditor";
 import { createClient } from "@/lib/supabase/client";
 import { computePackageTotalEur } from "@/lib/pricing";
+import { REGIONS, REGION_LABEL } from "@/lib/regions";
 
-type SupplierOption = { id: string; name: string; category: string };
+type SupplierOption = {
+  id: string;
+  name: string;
+  category: string;
+  base_region: string;
+  logo_url?: string | null;
+  star_rating?: number | null;
+  quality_rating?: number | null;
+};
 type PackageTypeOption = { value: string; label: string };
 
 export function CreatePackageForm({
@@ -112,14 +121,19 @@ export function CreatePackageForm({
         onChange={(e) => setNights(e.target.value)}
         className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
       />
-      <input
-        type="text"
+      <select
         required
-        placeholder="Region (e.g. lamezia-tropea)"
         value={baseRegion}
         onChange={(e) => setBaseRegion(e.target.value)}
         className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
-      />
+      >
+        <option value="">Select a region</option>
+        {REGIONS.map((r) => (
+          <option key={r} value={r}>
+            {REGION_LABEL[r]}
+          </option>
+        ))}
+      </select>
       <input
         type="number"
         required
@@ -141,6 +155,7 @@ export function CreatePackageForm({
         suppliers={suppliers}
         selectedIds={supplierIds}
         onChange={setSupplierIds}
+        region={baseRegion}
       />
 
       <ItineraryEditor days={itinerary} onChange={setItinerary} />

@@ -12,7 +12,8 @@ export default async function AdminPackagesPage() {
 
   const { data: suppliers } = await supabase
     .from("suppliers")
-    .select("id, name, category, star_rating, quality_rating")
+    .select("id, name, category, base_region, logo_url, star_rating, quality_rating")
+    .eq("status", "active")
     .order("name");
 
   const { data: packageTypes } = await supabase
@@ -54,14 +55,14 @@ export default async function AdminPackagesPage() {
         Packages here show up directly in the agency catalog.
       </p>
 
-      <div className="mt-8 max-w-2xl">
+      <div className="mt-8 max-w-4xl">
         <CreatePackageForm suppliers={suppliers ?? []} packageTypes={packageTypes ?? []} />
       </div>
 
       {!packages || packages.length === 0 ? (
         <p className="mt-8 text-ink/60">No packages created yet.</p>
       ) : (
-        <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-2">
           {packages.map((pkg) => (
             <PackageRow
               key={pkg.id}

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { AdminNav } from "./AdminNav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -32,9 +33,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-paper">
       <header className="border-b border-line px-6 py-5 md:px-12">
-        <p className="font-display text-lg font-semibold text-ink">
+        <Link href="/admin" className="font-display text-lg font-semibold text-ink">
           Italy Beyond Summer
-        </p>
+        </Link>
         <p className="text-sm text-ink/60">
           {profile.full_name ? `Welcome, ${profile.full_name}` : "Admin"}
         </p>

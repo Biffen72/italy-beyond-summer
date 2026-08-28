@@ -122,9 +122,9 @@ export default async function SupplierRequestsPage() {
   return (
     <main className="min-h-screen bg-paper">
       <header className="border-b border-line px-6 py-5 md:px-12">
-        <p className="font-display text-lg font-semibold text-ink">
+        <Link href="/supplier" className="font-display text-lg font-semibold text-ink">
           Italy Beyond Summer
-        </p>
+        </Link>
         <p className="mt-1 text-sm">
           <Link href="/supplier" className="text-ink/60 underline">
             ← Back to your profile

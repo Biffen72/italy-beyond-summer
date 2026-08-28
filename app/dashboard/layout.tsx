@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { SignOutButton } from "./SignOutButton";
 import { DashboardNav } from "./DashboardNav";
 import { ViewAsBanner } from "@/components/ViewAsBanner";
@@ -28,9 +29,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-screen bg-paper">
       <header className="flex items-center justify-between border-b border-line px-6 py-5 md:px-12">
         <div>
-          <p className="font-display text-lg font-semibold text-ink">
+          <Link href="/dashboard" className="font-display text-lg font-semibold text-ink">
             Italy Beyond Summer
-          </p>
+          </Link>
           <p className="text-sm text-ink/60">
             {profile?.full_name ? `Welcome back, ${profile.full_name}` : "Welcome back"}
           </p>
