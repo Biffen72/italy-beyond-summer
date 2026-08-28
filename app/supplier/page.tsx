@@ -94,6 +94,11 @@ export default async function SupplierPage() {
     .eq("supplier_id", supplierId)
     .eq("status", "pending");
 
+  const { count: projectCount } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "submitted");
+
   const { data: supplierCategories } = await supabase
     .from("categories")
     .select("value")
@@ -131,6 +136,16 @@ export default async function SupplierPage() {
           >
             {pendingRequestCount} booking {pendingRequestCount === 1 ? "request" : "requests"}{" "}
             awaiting your response — respond here →
+          </Link>
+        )}
+
+        {!!projectCount && (
+          <Link
+            href="/supplier/projects"
+            className="mt-4 block max-w-xl rounded-card border border-line bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-wine"
+          >
+            {projectCount} upcoming {projectCount === 1 ? "project" : "projects"} — see your
+            rooms/program →
           </Link>
         )}
 

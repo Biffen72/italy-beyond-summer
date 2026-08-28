@@ -1092,3 +1092,158 @@ on conflict (kind, value) do nothing;
 -- "categories/" prefix — no new bucket or storage policy needed.
 -- ─────────────────────────────────────────────────────────────
 alter table categories add column if not exists image_url text;
+
+-- ─────────────────────────────────────────────────────────────
+-- Stage U: Project module (phase 1 of the full booking-to-delivery
+-- roadmap). Once every supplier has confirmed and the agency books, a
+-- project is auto-created holding a room list (real hotel room types,
+-- named guests with contact info + allergies) and a day-by-day program.
+-- Suppliers only see the project once the agency finalizes it
+-- ("submitted"), and only their own relevant slice (the app layer, not
+-- RLS, filters rooms to hotels and program days to the tagged supplier —
+-- RLS just gates on confirmation + submitted status).
+-- ─────────────────────────────────────────────────────────────
+create table projects (
+  id uuid primary key default gen_random_uuid(),
+  request_type text not null check (request_type in ('reservation', 'custom')),
+  request_id uuid not null,
+  agency_id uuid not null references agencies (id),
+  name text not null,
+  start_date date,
+  end_date date,
+  group_size int,
+  status text not null default 'draft' check (status in ('draft', 'submitted')),
+  created_at timestamptz not null default now(),
+  unique (request_type, request_id)
+);
+
+create table project_rooms (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects (id) on delete cascade,
+  supplier_id uuid not null references suppliers (id),
+  hotel_room_type_id uuid references hotel_room_types (id) on delete set null,
+  room_type_label text not null,
+  sort_order int not null default 0
+);
+
+create table project_room_guests (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references project_rooms (id) on delete cascade,
+  full_name text not null,
+  email text,
+  mobile text,
+  allergies text,
+  sort_order int not null default 0
+);
+
+create table project_program_days (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects (id) on delete cascade,
+  day_number int not null,
+  title text not null,
+  description text,
+  time_of_day text,
+  supplier_id uuid references suppliers (id),
+  sort_order int not null default 0
+);
+
+alter table projects enable row level security;
+alter table project_rooms enable row level security;
+alter table project_room_guests enable row level security;
+alter table project_program_days enable row level security;
+
+create policy "Agencies can manage their own projects"
+  on projects for all
+  to authenticated
+  using (agency_id = fn_current_agency_id())
+  with check (agency_id = fn_current_agency_id());
+
+create policy "Admins can manage all projects"
+  on projects for all
+  to authenticated
+  using ((select role from profiles where profiles.id = auth.uid()) = 'admin')
+  with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');
+
+create policy "Suppliers can read submitted projects they're part of"
+  on projects for select
+  to authenticated
+  using (status = 'submitted' and fn_supplier_has_confirmation(request_type, request_id));
+
+create policy "Agencies can manage rooms on their own projects"
+  on project_rooms for all
+  to authenticated
+  using (project_id in (select id from projects where agency_id = fn_current_agency_id()))
+  with check (project_id in (select id from projects where agency_id = fn_current_agency_id()));
+
+create policy "Admins can manage all project rooms"
+  on project_rooms for all
+  to authenticated
+  using ((select role from profiles where profiles.id = auth.uid()) = 'admin')
+  with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');
+
+create policy "Suppliers can read rooms on submitted projects they're part of"
+  on project_rooms for select
+  to authenticated
+  using (
+    project_id in (
+      select id from projects
+      where status = 'submitted' and fn_supplier_has_confirmation(request_type, request_id)
+    )
+  );
+
+create policy "Agencies can manage guests on their own projects"
+  on project_room_guests for all
+  to authenticated
+  using (
+    room_id in (
+      select r.id from project_rooms r
+      join projects p on p.id = r.project_id
+      where p.agency_id = fn_current_agency_id()
+    )
+  )
+  with check (
+    room_id in (
+      select r.id from project_rooms r
+      join projects p on p.id = r.project_id
+      where p.agency_id = fn_current_agency_id()
+    )
+  );
+
+create policy "Admins can manage all project guests"
+  on project_room_guests for all
+  to authenticated
+  using ((select role from profiles where profiles.id = auth.uid()) = 'admin')
+  with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');
+
+create policy "Suppliers can read guests on submitted projects they're part of"
+  on project_room_guests for select
+  to authenticated
+  using (
+    room_id in (
+      select r.id from project_rooms r
+      join projects p on p.id = r.project_id
+      where p.status = 'submitted' and fn_supplier_has_confirmation(p.request_type, p.request_id)
+    )
+  );
+
+create policy "Agencies can manage program days on their own projects"
+  on project_program_days for all
+  to authenticated
+  using (project_id in (select id from projects where agency_id = fn_current_agency_id()))
+  with check (project_id in (select id from projects where agency_id = fn_current_agency_id()));
+
+create policy "Admins can manage all project program days"
+  on project_program_days for all
+  to authenticated
+  using ((select role from profiles where profiles.id = auth.uid()) = 'admin')
+  with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');
+
+create policy "Suppliers can read program days on submitted projects they're part of"
+  on project_program_days for select
+  to authenticated
+  using (
+    project_id in (
+      select id from projects
+      where status = 'submitted' and fn_supplier_has_confirmation(request_type, request_id)
+    )
+  );

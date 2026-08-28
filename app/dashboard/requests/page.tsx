@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { getConfirmationSummaries } from "@/lib/confirmations";
 import { REGION_LABEL } from "@/lib/regions";
 import { BookOrCancelButtons } from "./BookOrCancelButtons";
@@ -58,6 +59,14 @@ export default async function MyRequestsPage() {
     ...(customRequests ?? []).map((r) => ({ requestType: "custom" as const, requestId: r.id })),
   ]);
 
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id, request_type, request_id")
+    .eq("agency_id", agencyId);
+  const projectIdByRequest = new Map(
+    (projects ?? []).map((p) => [`${p.request_type}:${p.request_id}`, p.id])
+  );
+
   return (
     <section className="px-6 py-10 md:px-12">
       <h1 className="text-2xl font-semibold text-ink">My requests</h1>
@@ -79,6 +88,7 @@ export default async function MyRequestsPage() {
                 const summary = summaries.get(`reservation:${r.id}`);
                 const line = confirmationLine(summary);
                 const bookable = r.status === "pending" && summary?.status === "ready_for_customer";
+                const projectId = projectIdByRequest.get(`reservation:${r.id}`);
                 return (
                   <li key={r.id} className="rounded-card border border-line bg-white p-4">
                     <p className="font-semibold text-ink">{pkg?.title ?? "Package"}</p>
@@ -103,6 +113,14 @@ export default async function MyRequestsPage() {
                         )}
                       </div>
                     )}
+                    {r.status === "confirmed" && projectId && (
+                      <Link
+                        href={`/dashboard/projects/${projectId}`}
+                        className="mt-3 inline-block text-sm font-semibold text-wine underline decoration-line underline-offset-4 hover:text-wine-dark"
+                      >
+                        View project →
+                      </Link>
+                    )}
                   </li>
                 );
               })}
@@ -122,6 +140,7 @@ export default async function MyRequestsPage() {
                 const summary = summaries.get(`custom:${r.id}`);
                 const line = confirmationLine(summary);
                 const bookable = r.status === "pending" && summary?.status === "ready_for_customer";
+                const projectId = projectIdByRequest.get(`custom:${r.id}`);
                 return (
                   <li key={r.id} className="rounded-card border border-line bg-white p-4">
                     <p className="font-semibold text-ink">
@@ -147,6 +166,14 @@ export default async function MyRequestsPage() {
                           <BookOrCancelButtons requestType="custom" requestId={r.id} />
                         )}
                       </div>
+                    )}
+                    {r.status === "confirmed" && projectId && (
+                      <Link
+                        href={`/dashboard/projects/${projectId}`}
+                        className="mt-3 inline-block text-sm font-semibold text-wine underline decoration-line underline-offset-4 hover:text-wine-dark"
+                      >
+                        View project →
+                      </Link>
                     )}
                   </li>
                 );
