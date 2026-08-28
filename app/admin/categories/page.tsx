@@ -6,7 +6,7 @@ export default async function AdminCategoriesPage() {
 
   const { data: categories } = await supabase
     .from("categories")
-    .select("id, kind, value, label, icon, show_on_homepage, sort_order")
+    .select("id, kind, value, label, icon, image_url, show_on_homepage, sort_order")
     .order("sort_order");
 
   const packageCategories = (categories ?? []).filter((c) => c.kind === "package");

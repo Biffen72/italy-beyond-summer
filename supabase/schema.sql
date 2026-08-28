@@ -1083,3 +1083,12 @@ insert into categories (kind, value, label, sort_order) values
   ('supplier', 'Wedding venue', 'Wedding venue', 10),
   ('supplier', 'Conference center', 'Conference center', 11)
 on conflict (kind, value) do nothing;
+
+-- ─────────────────────────────────────────────────────────────
+-- Stage T: package theme photos. Thomas wants a real photo on each
+-- homepage theme box instead of just an emoji. Reuses the existing
+-- supplier-media bucket (admin already has full read/write there via
+-- Stage L's "Admins can manage any supplier media" policies) under a
+-- "categories/" prefix — no new bucket or storage policy needed.
+-- ─────────────────────────────────────────────────────────────
+alter table categories add column if not exists image_url text;

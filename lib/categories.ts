@@ -2,6 +2,7 @@ export type Category = {
   value: string;
   label: string;
   icon: string | null;
+  image_url: string | null;
   show_on_homepage: boolean;
   sort_order: number;
 };

@@ -24,7 +24,7 @@ export default async function DashboardPage() {
 
   const { data: themes } = await supabase
     .from("categories")
-    .select("value, label, icon")
+    .select("value, label, icon, image_url")
     .eq("kind", "package")
     .eq("show_on_homepage", true)
     .order("sort_order");
@@ -63,16 +63,34 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {(themes ?? []).map((theme) => (
-          <Link
-            key={theme.value}
-            href={`/dashboard/packages?theme=${theme.value}`}
-            className="flex flex-col items-center justify-center gap-3 rounded-card border border-line bg-white px-5 py-10 text-center transition hover:border-wine hover:shadow-sm"
-          >
-            {theme.icon && <span className="text-4xl">{theme.icon}</span>}
-            <span className="text-lg font-semibold text-ink">{theme.label}</span>
-          </Link>
-        ))}
+        {(themes ?? []).map((theme) =>
+          theme.image_url ? (
+            <Link
+              key={theme.value}
+              href={`/dashboard/packages?theme=${theme.value}`}
+              className="group relative flex h-40 items-end overflow-hidden rounded-card border border-line transition hover:shadow-sm"
+            >
+              <img
+                src={theme.image_url}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/10 to-transparent" />
+              <span className="relative z-10 w-full px-4 py-3 text-center text-lg font-semibold text-paper">
+                {theme.label}
+              </span>
+            </Link>
+          ) : (
+            <Link
+              key={theme.value}
+              href={`/dashboard/packages?theme=${theme.value}`}
+              className="flex h-40 flex-col items-center justify-center gap-3 rounded-card border border-line bg-white px-5 text-center transition hover:border-wine hover:shadow-sm"
+            >
+              {theme.icon && <span className="text-4xl">{theme.icon}</span>}
+              <span className="text-lg font-semibold text-ink">{theme.label}</span>
+            </Link>
+          )
+        )}
       </div>
 
       <Link

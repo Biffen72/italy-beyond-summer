@@ -27,6 +27,7 @@ export async function addCategory(input: {
   value: string;
   label: string;
   icon: string | null;
+  imageUrl: string | null;
   showOnHomepage: boolean;
 }) {
   const supabase = await requireAdmin();
@@ -45,6 +46,7 @@ export async function addCategory(input: {
     value: input.value,
     label: input.label,
     icon: input.icon,
+    image_url: input.imageUrl,
     show_on_homepage: input.showOnHomepage,
     sort_order: nextSortOrder,
   });
@@ -55,6 +57,18 @@ export async function addCategory(input: {
   revalidatePath("/dashboard/packages");
   revalidatePath("/admin/packages");
   revalidatePath("/supplier");
+}
+
+export async function updateCategoryImage(id: string, imageUrl: string | null) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase
+    .from("categories")
+    .update({ image_url: imageUrl })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/dashboard");
 }
 
 export async function deleteCategory(id: string, kind: "package" | "supplier", value: string) {
