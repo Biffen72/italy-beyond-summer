@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { RequestButton } from "../../RequestButton";
-import { PACKAGE_TYPE_LABEL } from "@/lib/packageTypes";
+import { categoryLabelMap } from "@/lib/categories";
 import { getPackageDisplayPrice } from "@/lib/pricing";
 import { SupplierRatingBadge } from "@/components/SupplierRatingBadge";
 import { resolveAgencyId } from "@/lib/viewAs";
@@ -43,6 +43,12 @@ export default async function PackageDetailPage({
 
   const displayPrice = await getPackageDisplayPrice(supabase, pkg, agencyCountry);
 
+  const { data: packageCategories } = await supabase
+    .from("categories")
+    .select("value, label")
+    .eq("kind", "package");
+  const labelMap = categoryLabelMap(packageCategories ?? []);
+
   const { data: itineraryDays } = await supabase
     .from("package_itinerary_days")
     .select("day_number, title, description")
@@ -69,7 +75,7 @@ export default async function PackageDetailPage({
   return (
     <section className="px-6 py-10 md:px-12">
       <p className="text-xs font-semibold uppercase tracking-wide text-wine">
-        {PACKAGE_TYPE_LABEL[pkg.package_type] ?? pkg.package_type} · {pkg.nights} nights ·{" "}
+        {labelMap[pkg.package_type] ?? pkg.package_type} · {pkg.nights} nights ·{" "}
         {pkg.base_region}
       </p>
       <h1 className="mt-1 text-2xl font-semibold text-ink">{pkg.title}</h1>

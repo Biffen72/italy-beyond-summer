@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/admin/suppliers", label: "Suppliers" },
   { href: "/admin/agencies", label: "Customers" },
   { href: "/admin/packages", label: "Packages" },
+  { href: "/admin/categories", label: "Categories" },
   { href: "/admin/reservations", label: "Reservations" },
   { href: "/admin/finance", label: "Finance" },
   { href: "/admin/custom-requests", label: "Custom requests" },

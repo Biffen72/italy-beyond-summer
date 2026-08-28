@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { PACKAGE_THEME_HOMEPAGE } from "@/lib/packageTypes";
 import { resolveAgencyId } from "@/lib/viewAs";
 
 export default async function DashboardPage() {
@@ -22,6 +21,13 @@ export default async function DashboardPage() {
     profileIncomplete =
       !agency?.address || !agency?.city || !agency?.country || !agency?.mobile_phone;
   }
+
+  const { data: themes } = await supabase
+    .from("categories")
+    .select("value, label, icon")
+    .eq("kind", "package")
+    .eq("show_on_homepage", true)
+    .order("sort_order");
 
   return (
     <section className="px-6 py-10 md:px-12">
@@ -57,13 +63,13 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {PACKAGE_THEME_HOMEPAGE.map((theme) => (
+        {(themes ?? []).map((theme) => (
           <Link
-            key={theme.type}
-            href={`/dashboard/packages?theme=${theme.type}`}
+            key={theme.value}
+            href={`/dashboard/packages?theme=${theme.value}`}
             className="flex flex-col items-center justify-center gap-3 rounded-card border border-line bg-white px-5 py-10 text-center transition hover:border-wine hover:shadow-sm"
           >
-            <span className="text-4xl">{theme.icon}</span>
+            {theme.icon && <span className="text-4xl">{theme.icon}</span>}
             <span className="text-lg font-semibold text-ink">{theme.label}</span>
           </Link>
         ))}

@@ -94,6 +94,13 @@ export default async function SupplierPage() {
     .eq("supplier_id", supplierId)
     .eq("status", "pending");
 
+  const { data: supplierCategories } = await supabase
+    .from("categories")
+    .select("value")
+    .eq("kind", "supplier")
+    .order("sort_order");
+  const categoryOptions = (supplierCategories ?? []).map((c) => c.value);
+
   return (
     <main className="min-h-screen bg-paper">
       <header className="border-b border-line px-6 py-5 md:px-12">
@@ -141,6 +148,7 @@ export default async function SupplierPage() {
             initialImages={images ?? []}
             initialText={sourceTranslation ?? null}
             initialRoomTypes={roomTypes}
+            categoryOptions={categoryOptions}
           />
         </div>
 

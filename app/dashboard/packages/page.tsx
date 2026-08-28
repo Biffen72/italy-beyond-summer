@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { RequestButton } from "../RequestButton";
-import { PACKAGE_TYPE_LABEL, type PackageType } from "@/lib/packageTypes";
+import { categoryLabelMap } from "@/lib/categories";
 import { getPackageDisplayPrice } from "@/lib/pricing";
 import { resolveAgencyId } from "@/lib/viewAs";
 
@@ -36,10 +36,16 @@ export default async function PackageCatalogPage({
     .order("price_eur", { ascending: true });
 
   if (theme) {
-    query = query.eq("package_type", theme as PackageType);
+    query = query.eq("package_type", theme);
   }
 
   const { data: packages } = await query;
+
+  const { data: packageCategories } = await supabase
+    .from("categories")
+    .select("value, label")
+    .eq("kind", "package");
+  const labelMap = categoryLabelMap(packageCategories ?? []);
 
   const packagesWithPrice = await Promise.all(
     (packages ?? []).map(async (pkg) => ({
@@ -48,7 +54,7 @@ export default async function PackageCatalogPage({
     }))
   );
 
-  const themeLabel = theme ? PACKAGE_TYPE_LABEL[theme] ?? theme : null;
+  const themeLabel = theme ? labelMap[theme] ?? theme : null;
 
   return (
     <section className="px-6 py-10 md:px-12">
@@ -64,8 +70,7 @@ export default async function PackageCatalogPage({
             {themeLabel ? `${themeLabel} packages` : "All packages"}
           </h1>
           <p className="mt-1 text-ink/60">
-            Ready-to-sell 7-night packages your agency can start marketing
-            today.
+            Ready-to-sell packages your agency can start marketing today.
           </p>
         </div>
         <Link
@@ -89,7 +94,7 @@ export default async function PackageCatalogPage({
             >
               <Link href={`/dashboard/packages/${pkg.id}`} className="block">
                 <p className="text-xs font-semibold uppercase tracking-wide text-wine">
-                  {PACKAGE_TYPE_LABEL[pkg.package_type] ?? pkg.package_type} ·{" "}
+                  {labelMap[pkg.package_type] ?? pkg.package_type} ·{" "}
                   {pkg.nights} nights
                 </p>
                 <h2 className="mt-2 text-lg font-semibold text-ink transition hover:text-wine">

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { PackageType } from "@/lib/packageTypes";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -31,15 +30,14 @@ export type ItineraryDayInput = {
 
 type PackageInput = {
   title: string;
-  packageType: PackageType;
+  packageType: string;
+  nights: number;
   baseRegion: string;
   priceEur: number;
   description: string;
   supplierIds: string[];
   itinerary: ItineraryDayInput[];
 };
-
-const PACKAGE_NIGHTS = 7;
 
 async function syncPackageSuppliers(
   supabase: Awaited<ReturnType<typeof requireAdmin>>,
@@ -95,7 +93,7 @@ export async function createPackage(input: PackageInput) {
     .insert({
       title: input.title,
       package_type: input.packageType,
-      nights: PACKAGE_NIGHTS,
+      nights: input.nights,
       base_region: input.baseRegion,
       price_eur: input.priceEur,
       description: input.description,
@@ -119,6 +117,7 @@ export async function updatePackage(packageId: string, input: PackageInput) {
     .update({
       title: input.title,
       package_type: input.packageType,
+      nights: input.nights,
       base_region: input.baseRegion,
       price_eur: input.priceEur,
       description: input.description,

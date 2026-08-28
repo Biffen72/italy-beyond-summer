@@ -2,19 +2,24 @@
 
 import { useState } from "react";
 import { createPackage, type ItineraryDayInput } from "./actions";
-import { PACKAGE_TYPES, PACKAGE_TYPE_LABEL, type PackageType } from "@/lib/packageTypes";
 import { SupplierPicker } from "./SupplierPicker";
 import { ItineraryEditor } from "./ItineraryEditor";
 import { createClient } from "@/lib/supabase/client";
 import { computePackageTotalEur } from "@/lib/pricing";
 
 type SupplierOption = { id: string; name: string; category: string };
+type PackageTypeOption = { value: string; label: string };
 
-const PACKAGE_NIGHTS = 7;
-
-export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }) {
+export function CreatePackageForm({
+  suppliers,
+  packageTypes,
+}: {
+  suppliers: SupplierOption[];
+  packageTypes: PackageTypeOption[];
+}) {
   const [title, setTitle] = useState("");
-  const [packageType, setPackageType] = useState<PackageType>(PACKAGE_TYPES[0]);
+  const [packageType, setPackageType] = useState(packageTypes[0]?.value ?? "");
+  const [nights, setNights] = useState("7");
   const [baseRegion, setBaseRegion] = useState("");
   const [priceEur, setPriceEur] = useState("");
   const [description, setDescription] = useState("");
@@ -32,7 +37,7 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
       const { eur, missingPriceCount } = await computePackageTotalEur(
         supabase,
         supplierIds,
-        PACKAGE_NIGHTS
+        Number(nights) || 1
       );
       const withMarkup = eur * 1.1;
       setSuggestedTotal(
@@ -52,6 +57,7 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
       await createPackage({
         title,
         packageType,
+        nights: Number(nights),
         baseRegion,
         priceEur: Number(priceEur),
         description,
@@ -59,6 +65,7 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
         itinerary,
       });
       setTitle("");
+      setNights("7");
       setBaseRegion("");
       setPriceEur("");
       setDescription("");
@@ -87,15 +94,24 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
       />
       <select
         value={packageType}
-        onChange={(e) => setPackageType(e.target.value as PackageType)}
+        onChange={(e) => setPackageType(e.target.value)}
         className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
       >
-        {PACKAGE_TYPES.map((t) => (
-          <option key={t} value={t}>
-            {PACKAGE_TYPE_LABEL[t]}
+        {packageTypes.map((t) => (
+          <option key={t.value} value={t.value}>
+            {t.label}
           </option>
         ))}
       </select>
+      <input
+        type="number"
+        required
+        min="1"
+        placeholder="Number of nights"
+        value={nights}
+        onChange={(e) => setNights(e.target.value)}
+        className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
+      />
       <input
         type="text"
         required
@@ -112,11 +128,8 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
         placeholder="Price (EUR)"
         value={priceEur}
         onChange={(e) => setPriceEur(e.target.value)}
-        className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
+        className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine md:col-span-2"
       />
-      <p className="text-sm text-ink/60 md:col-span-2">
-        7 nights — matches the weekly Monday–Monday flight from Oslo.
-      </p>
       <textarea
         placeholder="Description"
         value={description}

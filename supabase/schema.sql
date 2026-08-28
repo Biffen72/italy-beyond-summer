@@ -1022,3 +1022,64 @@ create policy "Admins can manage package itinerary"
   to authenticated
   using ((select role from profiles where profiles.id = auth.uid()) = 'admin')
   with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');
+
+-- ─────────────────────────────────────────────────────────────
+-- Stage S: admin-managed categories. Locking package_type to a fixed
+-- check-constraint list and package nights to always 7 both turned out too
+-- rigid — Thomas needs to add new package themes / supplier categories
+-- himself, and agencies still sell their own non-7-night custom packages.
+-- This table replaces the hardcoded PACKAGE_TYPES/CATEGORY_OPTIONS arrays;
+-- package_type becomes free text (like suppliers.category already was).
+-- ─────────────────────────────────────────────────────────────
+alter table packages drop constraint if exists packages_package_type_check;
+
+create table if not exists categories (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('package', 'supplier')),
+  value text not null,
+  label text not null,
+  icon text,
+  show_on_homepage boolean not null default true,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  unique (kind, value)
+);
+
+alter table categories enable row level security;
+
+drop policy if exists "Categories are readable by signed-in users" on categories;
+create policy "Categories are readable by signed-in users"
+  on categories for select
+  to authenticated
+  using (true);
+
+drop policy if exists "Admins can manage categories" on categories;
+create policy "Admins can manage categories"
+  on categories for all
+  to authenticated
+  using ((select role from profiles where profiles.id = auth.uid()) = 'admin')
+  with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');
+
+insert into categories (kind, value, label, icon, show_on_homepage, sort_order) values
+  ('package', 'bryllup', 'Wedding', '💍', true, 0),
+  ('package', 'vingaarder', 'Vineyards', '🍷', true, 1),
+  ('package', 'mat-gourmet', 'Food & gourmet', '🍝', true, 2),
+  ('package', 'hiking', 'Hiking', '🥾', true, 3),
+  ('package', 'opplevelsesreise', 'Other experiences', null, false, 4),
+  ('package', 'firma', 'Corporate', null, false, 5)
+on conflict (kind, value) do nothing;
+
+insert into categories (kind, value, label, sort_order) values
+  ('supplier', 'Hotel', 'Hotel', 0),
+  ('supplier', 'Restaurant', 'Restaurant', 1),
+  ('supplier', 'Guide', 'Guide', 2),
+  ('supplier', 'Transfer', 'Transfer', 3),
+  ('supplier', 'Winery', 'Winery', 4),
+  ('supplier', 'Foods & Gourmet', 'Foods & Gourmet', 5),
+  ('supplier', 'Olive farm', 'Olive farm', 6),
+  ('supplier', 'Hiking', 'Hiking', 7),
+  ('supplier', 'Exploring', 'Exploring', 8),
+  ('supplier', 'Spa & Wellness', 'Spa & Wellness', 9),
+  ('supplier', 'Wedding venue', 'Wedding venue', 10),
+  ('supplier', 'Conference center', 'Conference center', 11)
+on conflict (kind, value) do nothing;

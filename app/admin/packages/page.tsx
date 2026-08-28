@@ -15,6 +15,12 @@ export default async function AdminPackagesPage() {
     .select("id, name, category, star_rating, quality_rating")
     .order("name");
 
+  const { data: packageTypes } = await supabase
+    .from("categories")
+    .select("value, label")
+    .eq("kind", "package")
+    .order("sort_order");
+
   const { data: links } = await supabase
     .from("package_suppliers")
     .select("package_id, supplier_id");
@@ -49,7 +55,7 @@ export default async function AdminPackagesPage() {
       </p>
 
       <div className="mt-8 max-w-2xl">
-        <CreatePackageForm suppliers={suppliers ?? []} />
+        <CreatePackageForm suppliers={suppliers ?? []} packageTypes={packageTypes ?? []} />
       </div>
 
       {!packages || packages.length === 0 ? (
@@ -61,6 +67,7 @@ export default async function AdminPackagesPage() {
               key={pkg.id}
               pkg={pkg}
               suppliers={suppliers ?? []}
+              packageTypes={packageTypes ?? []}
               initialSupplierIds={linksByPackage.get(pkg.id) ?? []}
               initialItinerary={itineraryByPackage.get(pkg.id) ?? []}
             />

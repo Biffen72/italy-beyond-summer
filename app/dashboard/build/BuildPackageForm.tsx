@@ -27,7 +27,7 @@ export function BuildPackageForm({
   const supabase = createClient();
 
   const [baseRegion, setBaseRegion] = useState("");
-  const nights = "7";
+  const [nights, setNights] = useState("3");
   const [travelMonth, setTravelMonth] = useState("");
   const [groupSize, setGroupSize] = useState("");
   const [singleRoom, setSingleRoom] = useState(false);
@@ -138,10 +138,18 @@ export function BuildPackageForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-ink">Nights</label>
-          <p className="mt-1 flex h-[42px] w-full items-center rounded-card border border-line bg-paper px-4 text-ink/70">
-            7 nights — matches the weekly Monday–Monday flight from Oslo.
-          </p>
+          <label htmlFor="nights" className="block text-sm font-medium text-ink">
+            Nights
+          </label>
+          <input
+            id="nights"
+            type="number"
+            min="1"
+            required
+            value={nights}
+            onChange={(e) => setNights(e.target.value)}
+            className="mt-1 w-full rounded-card border border-line bg-white px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
+          />
         </div>
       </div>
 

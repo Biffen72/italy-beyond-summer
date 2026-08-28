@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { updatePackage, deletePackage, setPackageActive, type ItineraryDayInput } from "./actions";
-import { PACKAGE_TYPES, PACKAGE_TYPE_LABEL, type PackageType } from "@/lib/packageTypes";
 import { SupplierPicker } from "./SupplierPicker";
 import { ItineraryEditor } from "./ItineraryEditor";
 import { createClient } from "@/lib/supabase/client";
@@ -20,23 +19,25 @@ type Package = {
 };
 
 type SupplierOption = { id: string; name: string; category: string };
+type PackageTypeOption = { value: string; label: string };
 
 export function PackageRow({
   pkg,
   suppliers,
+  packageTypes,
   initialSupplierIds,
   initialItinerary,
 }: {
   pkg: Package;
   suppliers: SupplierOption[];
+  packageTypes: PackageTypeOption[];
   initialSupplierIds: string[];
   initialItinerary: ItineraryDayInput[];
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(pkg.title);
-  const [packageType, setPackageType] = useState<PackageType>(
-    pkg.package_type as PackageType
-  );
+  const [packageType, setPackageType] = useState(pkg.package_type);
+  const [nights, setNights] = useState(pkg.nights.toString());
   const [baseRegion, setBaseRegion] = useState(pkg.base_region);
   const [priceEur, setPriceEur] = useState(pkg.price_eur.toString());
   const [description, setDescription] = useState(pkg.description ?? "");
@@ -47,6 +48,8 @@ export function PackageRow({
   const [suggestedTotal, setSuggestedTotal] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  const typeLabel = packageTypes.find((t) => t.value === pkg.package_type)?.label ?? pkg.package_type;
+
   async function handlePreviewTotal() {
     setPreviewLoading(true);
     try {
@@ -54,7 +57,7 @@ export function PackageRow({
       const { eur, missingPriceCount } = await computePackageTotalEur(
         supabase,
         supplierIds,
-        pkg.nights
+        Number(nights) || 1
       );
       const withMarkup = eur * 1.1;
       setSuggestedTotal(
@@ -73,6 +76,7 @@ export function PackageRow({
       await updatePackage(pkg.id, {
         title,
         packageType,
+        nights: Number(nights),
         baseRegion,
         priceEur: Number(priceEur),
         description,
@@ -120,15 +124,22 @@ export function PackageRow({
         />
         <select
           value={packageType}
-          onChange={(e) => setPackageType(e.target.value as PackageType)}
+          onChange={(e) => setPackageType(e.target.value)}
           className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
         >
-          {PACKAGE_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {PACKAGE_TYPE_LABEL[t]}
+          {packageTypes.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
             </option>
           ))}
         </select>
+        <input
+          type="number"
+          min="1"
+          value={nights}
+          onChange={(e) => setNights(e.target.value)}
+          className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
+        />
         <input
           type="text"
           value={baseRegion}
@@ -141,12 +152,8 @@ export function PackageRow({
           step="0.01"
           value={priceEur}
           onChange={(e) => setPriceEur(e.target.value)}
-          className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
+          className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine md:col-span-2"
         />
-        <p className="text-sm text-ink/60 md:col-span-2">
-          {pkg.nights} nights (fixed — new packages are always 7 nights; use
-          Retire below if a package's duration no longer fits the schedule).
-        </p>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -199,7 +206,7 @@ export function PackageRow({
   return (
     <article className={`rounded-card border border-line bg-white p-5 ${pkg.active ? "" : "opacity-60"}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-wine">
-        {PACKAGE_TYPE_LABEL[pkg.package_type] ?? pkg.package_type} · {pkg.nights} nights
+        {typeLabel} · {pkg.nights} nights
         {!pkg.active && " · Retired"}
       </p>
       <h2 className="mt-2 text-lg font-semibold text-ink">{pkg.title}</h2>

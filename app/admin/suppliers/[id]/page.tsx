@@ -68,6 +68,13 @@ export default async function AdminSupplierEditPage({
     .eq("supplier_id", supplierId)
     .order("language");
 
+  const { data: supplierCategories } = await supabase
+    .from("categories")
+    .select("value")
+    .eq("kind", "supplier")
+    .order("sort_order");
+  const categoryOptions = (supplierCategories ?? []).map((c) => c.value);
+
   return (
     <section className="px-6 py-10 md:px-12">
       <h1 className="text-2xl font-semibold text-ink">
@@ -98,6 +105,7 @@ export default async function AdminSupplierEditPage({
           initialImages={images ?? []}
           initialText={sourceTranslation ?? null}
           initialRoomTypes={roomTypes ?? []}
+          categoryOptions={categoryOptions}
           isAdmin
         />
       </div>

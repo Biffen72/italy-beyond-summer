@@ -27,20 +27,6 @@ const LANGUAGE_LABEL: Record<SourceLanguage, string> = {
   en: "English",
 };
 
-const CATEGORY_OPTIONS = [
-  "Hotel",
-  "Restaurant",
-  "Guide",
-  "Transfer",
-  "Winery",
-  "Foods & Gourmet",
-  "Olive farm",
-  "Hiking",
-  "Exploring",
-  "Spa & Wellness",
-  "Wedding venue",
-  "Conference center",
-];
 const OTHER_CATEGORY = "__other__";
 
 type SupplierDetails = {
@@ -97,6 +83,7 @@ export function SupplierProfileForm({
   initialImages,
   initialText,
   initialRoomTypes,
+  categoryOptions,
   isAdmin = false,
 }: {
   supplierId: string;
@@ -104,6 +91,7 @@ export function SupplierProfileForm({
   initialImages: SupplierImage[];
   initialText: SourceText;
   initialRoomTypes: RoomType[];
+  categoryOptions: string[];
   // The price/quality rating is admin's own judgment call on a
   // supplier's value for money — only admin can see or set it, not the
   // supplier themselves, even though this same form is reused on their
@@ -115,9 +103,9 @@ export function SupplierProfileForm({
 
   // Supplier details
   const initialIsOther =
-    !!initialDetails.category && !CATEGORY_OPTIONS.includes(initialDetails.category);
+    !!initialDetails.category && !categoryOptions.includes(initialDetails.category);
   const [category, setCategory] = useState(
-    initialIsOther ? OTHER_CATEGORY : initialDetails.category || CATEGORY_OPTIONS[0]
+    initialIsOther ? OTHER_CATEGORY : initialDetails.category || categoryOptions[0] || ""
   );
   const [customCategory, setCustomCategory] = useState(
     initialIsOther ? initialDetails.category : ""
@@ -528,7 +516,7 @@ export function SupplierProfileForm({
             onChange={(e) => setCategory(e.target.value)}
             className="mt-1 w-full rounded-card border border-line bg-white px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
           >
-            {CATEGORY_OPTIONS.map((c) => (
+            {categoryOptions.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
