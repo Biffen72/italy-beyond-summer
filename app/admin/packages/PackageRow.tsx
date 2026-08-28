@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { updatePackage, deletePackage } from "./actions";
+import { updatePackage, deletePackage, setPackageActive, type ItineraryDayInput } from "./actions";
 import { PACKAGE_TYPES, PACKAGE_TYPE_LABEL, type PackageType } from "@/lib/packageTypes";
 import { SupplierPicker } from "./SupplierPicker";
+import { ItineraryEditor } from "./ItineraryEditor";
 import { createClient } from "@/lib/supabase/client";
 import { computePackageTotalEur } from "@/lib/pricing";
 
@@ -15,6 +16,7 @@ type Package = {
   base_region: string;
   price_eur: number;
   description: string | null;
+  active: boolean;
 };
 
 type SupplierOption = { id: string; name: string; category: string };
@@ -23,21 +25,23 @@ export function PackageRow({
   pkg,
   suppliers,
   initialSupplierIds,
+  initialItinerary,
 }: {
   pkg: Package;
   suppliers: SupplierOption[];
   initialSupplierIds: string[];
+  initialItinerary: ItineraryDayInput[];
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(pkg.title);
   const [packageType, setPackageType] = useState<PackageType>(
     pkg.package_type as PackageType
   );
-  const [nights, setNights] = useState(pkg.nights.toString());
   const [baseRegion, setBaseRegion] = useState(pkg.base_region);
   const [priceEur, setPriceEur] = useState(pkg.price_eur.toString());
   const [description, setDescription] = useState(pkg.description ?? "");
   const [supplierIds, setSupplierIds] = useState<string[]>(initialSupplierIds);
+  const [itinerary, setItinerary] = useState<ItineraryDayInput[]>(initialItinerary);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [suggestedTotal, setSuggestedTotal] = useState<string | null>(null);
@@ -50,7 +54,7 @@ export function PackageRow({
       const { eur, missingPriceCount } = await computePackageTotalEur(
         supabase,
         supplierIds,
-        Number(nights) || 1
+        pkg.nights
       );
       const withMarkup = eur * 1.1;
       setSuggestedTotal(
@@ -69,11 +73,11 @@ export function PackageRow({
       await updatePackage(pkg.id, {
         title,
         packageType,
-        nights: Number(nights),
         baseRegion,
         priceEur: Number(priceEur),
         description,
         supplierIds,
+        itinerary,
       });
       setEditing(false);
     } catch (err) {
@@ -88,6 +92,17 @@ export function PackageRow({
     setMessage(null);
     try {
       await deletePackage(pkg.id);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Something went wrong.");
+      setLoading(false);
+    }
+  }
+
+  async function handleToggleActive() {
+    setLoading(true);
+    setMessage(null);
+    try {
+      await setPackageActive(pkg.id, !pkg.active);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Something went wrong.");
       setLoading(false);
@@ -115,13 +130,6 @@ export function PackageRow({
           ))}
         </select>
         <input
-          type="number"
-          min="1"
-          value={nights}
-          onChange={(e) => setNights(e.target.value)}
-          className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
-        />
-        <input
           type="text"
           value={baseRegion}
           onChange={(e) => setBaseRegion(e.target.value)}
@@ -135,6 +143,10 @@ export function PackageRow({
           onChange={(e) => setPriceEur(e.target.value)}
           className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
         />
+        <p className="text-sm text-ink/60 md:col-span-2">
+          {pkg.nights} nights (fixed — new packages are always 7 nights; use
+          Retire below if a package's duration no longer fits the schedule).
+        </p>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -146,6 +158,8 @@ export function PackageRow({
           selectedIds={supplierIds}
           onChange={setSupplierIds}
         />
+
+        <ItineraryEditor days={itinerary} onChange={setItinerary} />
 
         <div className="md:col-span-2">
           <button
@@ -183,9 +197,10 @@ export function PackageRow({
   }
 
   return (
-    <article className="rounded-card border border-line bg-white p-5">
+    <article className={`rounded-card border border-line bg-white p-5 ${pkg.active ? "" : "opacity-60"}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-wine">
         {PACKAGE_TYPE_LABEL[pkg.package_type] ?? pkg.package_type} · {pkg.nights} nights
+        {!pkg.active && " · Retired"}
       </p>
       <h2 className="mt-2 text-lg font-semibold text-ink">{pkg.title}</h2>
       <p className="mt-1 text-sm text-ink/60">{pkg.description}</p>
@@ -194,18 +209,27 @@ export function PackageRow({
       </p>
       <p className="mt-2 text-xs text-ink/50">
         {initialSupplierIds.length} linked supplier
-        {initialSupplierIds.length === 1 ? "" : "s"}
+        {initialSupplierIds.length === 1 ? "" : "s"} · {initialItinerary.length} itinerary day
+        {initialItinerary.length === 1 ? "" : "s"}
       </p>
 
       {message && <p className="mt-2 text-sm text-wine">{message}</p>}
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex flex-wrap gap-3">
         <button
           type="button"
           onClick={() => setEditing(true)}
           className="rounded-card border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-wine"
         >
           Edit
+        </button>
+        <button
+          type="button"
+          onClick={handleToggleActive}
+          disabled={loading}
+          className="rounded-card border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-wine disabled:opacity-60"
+        >
+          {pkg.active ? "Retire" : "Reactivate"}
         </button>
         <button
           type="button"

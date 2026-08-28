@@ -17,7 +17,11 @@ export function DashboardNav() {
     <nav className="flex gap-5 border-b border-line px-6 py-3 text-sm md:px-12">
       {LINKS.map((link) => {
         const active =
-          link.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(link.href);
+          link.href === "/dashboard"
+            ? pathname === "/dashboard" ||
+              pathname.startsWith("/dashboard/packages") ||
+              pathname.startsWith("/dashboard/build")
+            : pathname.startsWith(link.href);
         return (
           <Link
             key={link.href}

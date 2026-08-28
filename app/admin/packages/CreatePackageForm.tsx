@@ -1,22 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { createPackage } from "./actions";
+import { createPackage, type ItineraryDayInput } from "./actions";
 import { PACKAGE_TYPES, PACKAGE_TYPE_LABEL, type PackageType } from "@/lib/packageTypes";
 import { SupplierPicker } from "./SupplierPicker";
+import { ItineraryEditor } from "./ItineraryEditor";
 import { createClient } from "@/lib/supabase/client";
 import { computePackageTotalEur } from "@/lib/pricing";
 
 type SupplierOption = { id: string; name: string; category: string };
 
+const PACKAGE_NIGHTS = 7;
+
 export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }) {
   const [title, setTitle] = useState("");
   const [packageType, setPackageType] = useState<PackageType>(PACKAGE_TYPES[0]);
-  const [nights, setNights] = useState("");
   const [baseRegion, setBaseRegion] = useState("");
   const [priceEur, setPriceEur] = useState("");
   const [description, setDescription] = useState("");
   const [supplierIds, setSupplierIds] = useState<string[]>([]);
+  const [itinerary, setItinerary] = useState<ItineraryDayInput[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [suggestedTotal, setSuggestedTotal] = useState<string | null>(null);
@@ -29,7 +32,7 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
       const { eur, missingPriceCount } = await computePackageTotalEur(
         supabase,
         supplierIds,
-        Number(nights) || 1
+        PACKAGE_NIGHTS
       );
       const withMarkup = eur * 1.1;
       setSuggestedTotal(
@@ -49,18 +52,18 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
       await createPackage({
         title,
         packageType,
-        nights: Number(nights),
         baseRegion,
         priceEur: Number(priceEur),
         description,
         supplierIds,
+        itinerary,
       });
       setTitle("");
-      setNights("");
       setBaseRegion("");
       setPriceEur("");
       setDescription("");
       setSupplierIds([]);
+      setItinerary([]);
       setMessage("Package created.");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Something went wrong.");
@@ -94,15 +97,6 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
         ))}
       </select>
       <input
-        type="number"
-        required
-        min="1"
-        placeholder="Number of nights"
-        value={nights}
-        onChange={(e) => setNights(e.target.value)}
-        className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
-      />
-      <input
         type="text"
         required
         placeholder="Region (e.g. lamezia-tropea)"
@@ -120,6 +114,9 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
         onChange={(e) => setPriceEur(e.target.value)}
         className="rounded-card border border-line px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
       />
+      <p className="text-sm text-ink/60 md:col-span-2">
+        7 nights — matches the weekly Monday–Monday flight from Oslo.
+      </p>
       <textarea
         placeholder="Description"
         value={description}
@@ -132,6 +129,8 @@ export function CreatePackageForm({ suppliers }: { suppliers: SupplierOption[] }
         selectedIds={supplierIds}
         onChange={setSupplierIds}
       />
+
+      <ItineraryEditor days={itinerary} onChange={setItinerary} />
 
       <div className="md:col-span-2">
         <button

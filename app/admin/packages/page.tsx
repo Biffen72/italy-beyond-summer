@@ -7,7 +7,7 @@ export default async function AdminPackagesPage() {
 
   const { data: packages } = await supabase
     .from("packages")
-    .select("id, title, package_type, nights, base_region, price_eur, description")
+    .select("id, title, package_type, nights, base_region, price_eur, description, active")
     .order("price_eur", { ascending: true });
 
   const { data: suppliers } = await supabase
@@ -24,6 +24,21 @@ export default async function AdminPackagesPage() {
     const list = linksByPackage.get(l.package_id) ?? [];
     list.push(l.supplier_id);
     linksByPackage.set(l.package_id, list);
+  });
+
+  const { data: itineraryDays } = await supabase
+    .from("package_itinerary_days")
+    .select("package_id, day_number, title, description")
+    .order("day_number");
+
+  const itineraryByPackage = new Map<
+    string,
+    { dayNumber: number; title: string; description: string }[]
+  >();
+  (itineraryDays ?? []).forEach((d) => {
+    const list = itineraryByPackage.get(d.package_id) ?? [];
+    list.push({ dayNumber: d.day_number, title: d.title, description: d.description ?? "" });
+    itineraryByPackage.set(d.package_id, list);
   });
 
   return (
@@ -47,6 +62,7 @@ export default async function AdminPackagesPage() {
               pkg={pkg}
               suppliers={suppliers ?? []}
               initialSupplierIds={linksByPackage.get(pkg.id) ?? []}
+              initialItinerary={itineraryByPackage.get(pkg.id) ?? []}
             />
           ))}
         </div>

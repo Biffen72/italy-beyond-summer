@@ -984,3 +984,41 @@ create policy "Admins can update all agencies"
   on agencies for update
   to authenticated
   using ((select role from profiles where profiles.id = auth.uid()) = 'admin');
+
+-- ─────────────────────────────────────────────────────────────
+-- Stage R: themed packages, retiring short packages, and day-by-day
+-- itineraries. Only one weekly charter (Oslo, Monday–Monday) exists, so
+-- packages standardize on 7 nights going forward — `active` lets the old
+-- 3/4-night packages be hidden from the agency catalog without deleting
+-- them (reservation_requests still references them). package_type gains
+-- theme values for the new homepage's browse-by-theme boxes.
+-- ─────────────────────────────────────────────────────────────
+alter table packages drop constraint if exists packages_package_type_check;
+alter table packages add constraint packages_package_type_check
+  check (package_type in ('opplevelsesreise', 'firma', 'bryllup', 'vingaarder', 'mat-gourmet', 'hiking'));
+
+alter table packages add column if not exists active boolean not null default true;
+
+create table if not exists package_itinerary_days (
+  id uuid primary key default gen_random_uuid(),
+  package_id uuid not null references packages (id) on delete cascade,
+  day_number int not null,
+  title text not null,
+  description text,
+  unique (package_id, day_number)
+);
+
+alter table package_itinerary_days enable row level security;
+
+drop policy if exists "Package itinerary is readable by signed-in users" on package_itinerary_days;
+create policy "Package itinerary is readable by signed-in users"
+  on package_itinerary_days for select
+  to authenticated
+  using (true);
+
+drop policy if exists "Admins can manage package itinerary" on package_itinerary_days;
+create policy "Admins can manage package itinerary"
+  on package_itinerary_days for all
+  to authenticated
+  using ((select role from profiles where profiles.id = auth.uid()) = 'admin')
+  with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');

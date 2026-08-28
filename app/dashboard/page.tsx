@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { RequestButton } from "./RequestButton";
-import { PACKAGE_TYPE_LABEL } from "@/lib/packageTypes";
-import { getPackageDisplayPrice } from "@/lib/pricing";
+import { PACKAGE_THEME_HOMEPAGE } from "@/lib/packageTypes";
 import { resolveAgencyId } from "@/lib/viewAs";
 
 export default async function DashboardPage() {
@@ -12,10 +10,9 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { agencyId, viewingAs } = await resolveAgencyId(supabase, user!.id);
+  const { agencyId } = await resolveAgencyId(supabase, user!.id);
 
   let profileIncomplete = false;
-  let agencyCountry: string | null = null;
   if (agencyId) {
     const { data: agency } = await supabase
       .from("agencies")
@@ -24,20 +21,7 @@ export default async function DashboardPage() {
       .single();
     profileIncomplete =
       !agency?.address || !agency?.city || !agency?.country || !agency?.mobile_phone;
-    agencyCountry = agency?.country ?? null;
   }
-
-  const { data: packages } = await supabase
-    .from("packages")
-    .select("id, title, package_type, nights, base_region, price_eur, description")
-    .order("price_eur", { ascending: true });
-
-  const packagesWithPrice = await Promise.all(
-    (packages ?? []).map(async (pkg) => ({
-      ...pkg,
-      displayPrice: await getPackageDisplayPrice(supabase, pkg, agencyCountry),
-    }))
-  );
 
   return (
     <section className="px-6 py-10 md:px-12">
@@ -58,9 +42,10 @@ export default async function DashboardPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Package catalog</h1>
+          <h1 className="text-2xl font-semibold text-ink">What are your customers looking for?</h1>
           <p className="mt-1 text-ink/60">
-            Ready-to-sell packages your agency can start marketing today.
+            Pick a theme to see ready-to-sell 7-night packages, or build your
+            own from scratch.
           </p>
         </div>
         <Link
@@ -71,38 +56,25 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {packagesWithPrice.length === 0 ? (
-        <p className="mt-8 text-ink/60">
-          No packages are published yet — check back soon.
-        </p>
-      ) : (
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {packagesWithPrice.map((pkg) => (
-            <article
-              key={pkg.id}
-              className="rounded-card border border-line bg-white p-5"
-            >
-              <Link href={`/dashboard/packages/${pkg.id}`} className="block">
-                <p className="text-xs font-semibold uppercase tracking-wide text-wine">
-                  {PACKAGE_TYPE_LABEL[pkg.package_type] ?? pkg.package_type} ·{" "}
-                  {pkg.nights} nights
-                </p>
-                <h2 className="mt-2 text-lg font-semibold text-ink transition hover:text-wine">
-                  {pkg.title}
-                </h2>
-                <p className="mt-1 text-sm text-ink/60">{pkg.description}</p>
-                <p className="mt-4 font-display text-2xl font-semibold text-ink">
-                  {pkg.displayPrice}
-                  <span className="ml-1 text-sm font-normal text-ink/50">
-                    / person
-                  </span>
-                </p>
-              </Link>
-              <RequestButton packageId={pkg.id} readOnly={!!viewingAs} />
-            </article>
-          ))}
-        </div>
-      )}
+      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {PACKAGE_THEME_HOMEPAGE.map((theme) => (
+          <Link
+            key={theme.type}
+            href={`/dashboard/packages?theme=${theme.type}`}
+            className="flex flex-col items-center justify-center gap-3 rounded-card border border-line bg-white px-5 py-10 text-center transition hover:border-wine hover:shadow-sm"
+          >
+            <span className="text-4xl">{theme.icon}</span>
+            <span className="text-lg font-semibold text-ink">{theme.label}</span>
+          </Link>
+        ))}
+      </div>
+
+      <Link
+        href="/dashboard/packages"
+        className="mt-6 inline-block text-sm font-semibold text-wine underline decoration-line underline-offset-4 hover:text-wine-dark"
+      >
+        Or browse all packages →
+      </Link>
     </section>
   );
 }

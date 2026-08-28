@@ -43,6 +43,12 @@ export default async function PackageDetailPage({
 
   const displayPrice = await getPackageDisplayPrice(supabase, pkg, agencyCountry);
 
+  const { data: itineraryDays } = await supabase
+    .from("package_itinerary_days")
+    .select("day_number, title, description")
+    .eq("package_id", id)
+    .order("day_number");
+
   const { data: links } = await supabase
     .from("package_suppliers")
     .select("supplier_id, sort_order")
@@ -76,6 +82,27 @@ export default async function PackageDetailPage({
       <div className="mt-4 max-w-xs">
         <RequestButton packageId={pkg.id} readOnly={!!viewingAs} />
       </div>
+
+      {itineraryDays && itineraryDays.length > 0 && (
+        <div className="mt-10 max-w-2xl">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/60">
+            Day-by-day
+          </h2>
+          <ol className="mt-4 space-y-4">
+            {itineraryDays.map((day) => (
+              <li key={day.day_number} className="rounded-card border border-line bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-wine">
+                  Day {day.day_number}
+                </p>
+                <p className="mt-1 font-semibold text-ink">{day.title}</p>
+                {day.description && (
+                  <p className="mt-1 text-sm text-ink/70">{day.description}</p>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       <div className="mt-10 max-w-2xl">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/60">

@@ -23,15 +23,23 @@ async function requireAdmin() {
   return supabase;
 }
 
+export type ItineraryDayInput = {
+  dayNumber: number;
+  title: string;
+  description: string;
+};
+
 type PackageInput = {
   title: string;
   packageType: PackageType;
-  nights: number;
   baseRegion: string;
   priceEur: number;
   description: string;
   supplierIds: string[];
+  itinerary: ItineraryDayInput[];
 };
+
+const PACKAGE_NIGHTS = 7;
 
 async function syncPackageSuppliers(
   supabase: Awaited<ReturnType<typeof requireAdmin>>,
@@ -56,6 +64,30 @@ async function syncPackageSuppliers(
   if (insertErr) throw new Error(insertErr.message);
 }
 
+async function syncPackageItinerary(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>,
+  packageId: string,
+  itinerary: ItineraryDayInput[]
+) {
+  const { error: deleteErr } = await supabase
+    .from("package_itinerary_days")
+    .delete()
+    .eq("package_id", packageId);
+  if (deleteErr) throw new Error(deleteErr.message);
+
+  if (itinerary.length === 0) return;
+
+  const { error: insertErr } = await supabase.from("package_itinerary_days").insert(
+    itinerary.map((day) => ({
+      package_id: packageId,
+      day_number: day.dayNumber,
+      title: day.title,
+      description: day.description || null,
+    }))
+  );
+  if (insertErr) throw new Error(insertErr.message);
+}
+
 export async function createPackage(input: PackageInput) {
   const supabase = await requireAdmin();
   const { data, error } = await supabase
@@ -63,7 +95,7 @@ export async function createPackage(input: PackageInput) {
     .insert({
       title: input.title,
       package_type: input.packageType,
-      nights: input.nights,
+      nights: PACKAGE_NIGHTS,
       base_region: input.baseRegion,
       price_eur: input.priceEur,
       description: input.description,
@@ -73,9 +105,11 @@ export async function createPackage(input: PackageInput) {
   if (error) throw new Error(error.message);
 
   await syncPackageSuppliers(supabase, data.id, input.supplierIds);
+  await syncPackageItinerary(supabase, data.id, input.itinerary);
 
   revalidatePath("/admin/packages");
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/packages");
 }
 
 export async function updatePackage(packageId: string, input: PackageInput) {
@@ -85,7 +119,6 @@ export async function updatePackage(packageId: string, input: PackageInput) {
     .update({
       title: input.title,
       package_type: input.packageType,
-      nights: input.nights,
       base_region: input.baseRegion,
       price_eur: input.priceEur,
       description: input.description,
@@ -94,9 +127,11 @@ export async function updatePackage(packageId: string, input: PackageInput) {
   if (error) throw new Error(error.message);
 
   await syncPackageSuppliers(supabase, packageId, input.supplierIds);
+  await syncPackageItinerary(supabase, packageId, input.itinerary);
 
   revalidatePath("/admin/packages");
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/packages");
 }
 
 export async function deletePackage(packageId: string) {
@@ -105,4 +140,17 @@ export async function deletePackage(packageId: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/admin/packages");
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/packages");
+}
+
+export async function setPackageActive(packageId: string, active: boolean) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase
+    .from("packages")
+    .update({ active })
+    .eq("id", packageId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/packages");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/packages");
 }
