@@ -60,7 +60,8 @@ function LoginForm() {
         .eq("id", signInData.user.id)
         .single();
 
-      if (userProfile?.role === "supplier") destination = "/supplier";
+      if (userProfile?.role === "supplier" || userProfile?.role === "guide")
+        destination = "/supplier";
       else if (userProfile?.role === "admin") destination = "/admin";
     }
 

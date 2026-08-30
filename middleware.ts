@@ -56,6 +56,7 @@ export async function middleware(request: NextRequest) {
     const roleMismatch =
       (pathname.startsWith("/supplier") &&
         profile?.role !== "supplier" &&
+        profile?.role !== "guide" &&
         profile?.role !== "admin") ||
       (pathname.startsWith("/admin") && profile?.role !== "admin");
 

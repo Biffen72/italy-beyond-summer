@@ -12,6 +12,7 @@ export default async function AdminTranslationsPage() {
     .select("id, name, category")
     .order("name");
   const groupedSuppliers = groupByCategory(suppliers ?? []);
+  const guides = (suppliers ?? []).filter((s) => s.category === "Guide");
 
   // Includes both normal AI-translation review rows (pending_review) and
   // AI-authored source rows that were bulk-imported as candidates
@@ -108,12 +109,39 @@ export default async function AdminTranslationsPage() {
             </button>
           </form>
 
-          <div className="rounded-card border border-line bg-white p-4 opacity-50">
-            <p className="text-sm font-semibold text-ink">View as guide</p>
-            <p className="mt-2 text-xs text-ink/60">
-              Coming soon — the guide app hasn&apos;t been built yet.
-            </p>
-          </div>
+          <form action={setViewAs} className="rounded-card border border-line bg-white p-4">
+            <input type="hidden" name="type" value="supplier" />
+            <label className="block text-sm font-semibold text-ink">View as guide</label>
+            {guides.length === 0 ? (
+              <p className="mt-2 text-xs text-ink/60">
+                No suppliers are categorized as a Guide yet.
+              </p>
+            ) : (
+              <>
+                <select
+                  name="id"
+                  required
+                  defaultValue=""
+                  className="mt-2 w-full rounded-card border border-line px-3 py-2 text-sm text-ink outline-none focus-visible:border-wine"
+                >
+                  <option value="" disabled>
+                    Select a guide…
+                  </option>
+                  {guides.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  className="mt-3 w-full rounded-card bg-wine px-3 py-2 text-sm font-semibold text-paper transition hover:bg-wine-dark"
+                >
+                  View →
+                </button>
+              </>
+            )}
+          </form>
         </div>
       </div>
 
