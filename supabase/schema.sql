@@ -1269,3 +1269,18 @@ create policy "Admins can create confirmations"
   on booking_supplier_confirmations for insert
   to authenticated
   with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');
+
+-- ─────────────────────────────────────────────────────────────
+-- Stage W: traveller trip page (phase 3 of the booking roadmap). Each
+-- project gets an unguessable share token so a submitted itinerary can be
+-- shown on a public, no-login page — the page reads via the service-role
+-- key rather than RLS, so no anon policies are needed here. Suppliers also
+-- get an optional contact phone so a tagged guide/supplier can be reached
+-- from that page.
+-- ─────────────────────────────────────────────────────────────
+alter table projects
+  add column if not exists share_token uuid not null default gen_random_uuid();
+create unique index if not exists projects_share_token_key on projects (share_token);
+
+alter table suppliers
+  add column if not exists contact_phone text;

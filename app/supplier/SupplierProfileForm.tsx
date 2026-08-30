@@ -36,6 +36,7 @@ type SupplierDetails = {
   logoUrl: string | null;
   starRating: number | null;
   qualityRating: number | null;
+  contactPhone: string;
 };
 
 type SupplierImage = { id: string; url: string };
@@ -114,6 +115,7 @@ export function SupplierProfileForm({
     initialDetails.pricePerPerson?.toString() ?? ""
   );
   const [address, setAddress] = useState(initialDetails.address);
+  const [contactPhone, setContactPhone] = useState(initialDetails.contactPhone);
   const [logoUrl, setLogoUrl] = useState(initialDetails.logoUrl);
   const [starRating, setStarRating] = useState(initialDetails.starRating?.toString() ?? "");
   const [qualityRating, setQualityRating] = useState(
@@ -173,6 +175,7 @@ export function SupplierProfileForm({
         logoUrl: url,
         starRating: starRating ? Number(starRating) : null,
         qualityRating: qualityRating ? Number(qualityRating) : null,
+        contactPhone,
       });
       setLogoUrl(url);
       setDetailsMessage("Logo uploaded.");
@@ -225,6 +228,7 @@ export function SupplierProfileForm({
         logoUrl,
         starRating: starRating ? Number(starRating) : null,
         qualityRating: qualityRating ? Number(qualityRating) : null,
+        contactPhone,
       });
       setDetailsMessage("Supplier details saved.");
     } catch (err) {
@@ -559,6 +563,19 @@ export function SupplierProfileForm({
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              className="mt-1 w-full rounded-card border border-line bg-white px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
+            />
+          </div>
+          <div className="flex-1">
+            <label htmlFor="contactPhone" className="block text-sm font-medium text-ink">
+              Contact phone (shown to travellers)
+            </label>
+            <input
+              id="contactPhone"
+              type="text"
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              placeholder="+39 ..."
               className="mt-1 w-full rounded-card border border-line bg-white px-4 py-2.5 text-ink outline-none focus-visible:border-wine"
             />
           </div>

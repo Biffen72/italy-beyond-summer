@@ -1,10 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { resolveAgencyId } from "@/lib/viewAs";
 import { ProjectHeaderForm } from "./ProjectHeaderForm";
 import { RoomsEditor } from "./RoomsEditor";
 import { ProgramEditor } from "./ProgramEditor";
 import { SubmitProjectButton } from "./SubmitProjectButton";
+import { ShareLinkBox } from "./ShareLinkBox";
 
 export default async function ProjectDetailPage({
   params,
@@ -21,7 +23,9 @@ export default async function ProjectDetailPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, request_type, request_id, name, start_date, end_date, group_size, status")
+    .select(
+      "id, request_type, request_id, name, start_date, end_date, group_size, status, share_token"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -134,6 +138,11 @@ export default async function ProjectDetailPage({
   // "view as" preview stays read-only like every other impersonated page.
   const readOnly = !!viewingAs;
 
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host");
+  const protocol = host?.startsWith("localhost") ? "http" : "https";
+  const tripUrl = `${protocol}://${host}/trip/${project.share_token}`;
+
   return (
     <section className="px-6 py-10 md:px-12">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -194,9 +203,12 @@ export default async function ProjectDetailPage({
         </div>
       )}
       {!readOnly && project.status === "submitted" && (
-        <p className="mt-10 max-w-4xl border-t border-line pt-6 text-sm text-ink/60">
-          Submitted — suppliers can now see their relevant part of this project.
-        </p>
+        <div className="mt-10 max-w-4xl space-y-4 border-t border-line pt-6">
+          <p className="text-sm text-ink/60">
+            Submitted — suppliers can now see their relevant part of this project.
+          </p>
+          <ShareLinkBox url={tripUrl} />
+        </div>
       )}
     </section>
   );
