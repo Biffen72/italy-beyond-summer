@@ -1284,3 +1284,14 @@ create unique index if not exists projects_share_token_key on projects (share_to
 
 alter table suppliers
   add column if not exists contact_phone text;
+
+-- ─────────────────────────────────────────────────────────────
+-- Stage X: admin oversight + invoice payment tracking (phase 5 of the
+-- booking roadmap). Manual invoice status — admin flips this once they've
+-- sent/been paid an invoice through whatever tool they already use, not
+-- automated generation or sending. No RLS change needed: the existing
+-- "Admins can update all reservation requests" policy already covers it.
+-- ─────────────────────────────────────────────────────────────
+alter table reservation_requests
+  add column if not exists invoice_status text not null default 'not_invoiced'
+    check (invoice_status in ('not_invoiced', 'invoiced', 'paid'));

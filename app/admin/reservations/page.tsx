@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { getConfirmationSummaries } from "@/lib/confirmations";
-import { setReservationStatus } from "./actions";
+import { daysAgoLabel, daysSince, STALE_REQUEST_DAYS } from "@/lib/dateAge";
+import { setReservationStatus, setInvoiceStatus } from "./actions";
+
+const INVOICE_LABEL: Record<string, string> = {
+  not_invoiced: "Not invoiced",
+  invoiced: "Invoiced",
+  paid: "Paid",
+};
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pending",
@@ -15,7 +22,7 @@ export default async function AdminReservationsPage() {
   const { data: requests } = await supabase
     .from("reservation_requests")
     .select(
-      "id, travel_month, group_size, single_room, status, created_at, agencies(name), packages(title)"
+      "id, travel_month, group_size, single_room, status, created_at, invoice_status, agencies(name), packages(title)"
     )
     .order("created_at", { ascending: false });
 
@@ -45,6 +52,8 @@ export default async function AdminReservationsPage() {
                 <th className="px-4 py-3">Room</th>
                 <th className="px-4 py-3">Suppliers</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Age</th>
+                <th className="px-4 py-3">Invoice</th>
                 <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
@@ -71,6 +80,46 @@ export default async function AdminReservationsPage() {
                             : `${summary.yesCount}/${summary.total} confirmed`}
                     </td>
                     <td className="px-4 py-3">{STATUS_LABEL[r.status] ?? r.status}</td>
+                    <td
+                      className={`px-4 py-3 ${
+                        r.status === "pending" && daysSince(r.created_at) >= STALE_REQUEST_DAYS
+                          ? "font-semibold text-wine"
+                          : "text-ink/60"
+                      }`}
+                    >
+                      {daysAgoLabel(r.created_at)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.status === "confirmed" ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-ink/70">
+                            {INVOICE_LABEL[r.invoice_status] ?? r.invoice_status}
+                          </span>
+                          {r.invoice_status === "not_invoiced" && (
+                            <form action={setInvoiceStatus.bind(null, r.id, "invoiced")}>
+                              <button
+                                type="submit"
+                                className="rounded-card border border-line px-2 py-1 text-xs font-semibold text-ink transition hover:border-wine"
+                              >
+                                Mark invoiced
+                              </button>
+                            </form>
+                          )}
+                          {r.invoice_status === "invoiced" && (
+                            <form action={setInvoiceStatus.bind(null, r.id, "paid")}>
+                              <button
+                                type="submit"
+                                className="rounded-card border border-line px-2 py-1 text-xs font-semibold text-ink transition hover:border-wine"
+                              >
+                                Mark paid
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-ink/40">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {r.status === "pending" && (
                         <div className="flex gap-2">

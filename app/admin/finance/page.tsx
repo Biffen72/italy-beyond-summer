@@ -22,7 +22,7 @@ export default async function AdminFinancePage() {
 
   const { data: reservations } = await supabase
     .from("reservation_requests")
-    .select("price_eur_snapshot, supplier_cost_eur_snapshot, created_at, status")
+    .select("price_eur_snapshot, supplier_cost_eur_snapshot, created_at, status, invoice_status")
     .eq("status", "confirmed");
 
   const rows = reservations ?? [];
@@ -34,6 +34,8 @@ export default async function AdminFinancePage() {
   let salesThisMonth = 0;
   let salesThisWeek = 0;
   let totalProfit = 0;
+  let invoicedAwaitingPayment = 0;
+  let paid = 0;
 
   for (const r of rows) {
     const price = Number(r.price_eur_snapshot ?? 0);
@@ -44,6 +46,8 @@ export default async function AdminFinancePage() {
     totalProfit += price - cost;
     if (created >= monthStart) salesThisMonth += price;
     if (created >= weekStart) salesThisWeek += price;
+    if (r.invoice_status === "invoiced") invoicedAwaitingPayment += price;
+    if (r.invoice_status === "paid") paid += price;
   }
 
   return (
@@ -88,6 +92,33 @@ export default async function AdminFinancePage() {
           </p>
           <p className="mt-2 font-display text-2xl font-semibold text-wine">
             {formatEur(totalProfit)}
+          </p>
+        </div>
+      </div>
+
+      <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-ink/60">
+        Invoice payment status
+      </h2>
+      <p className="mt-1 max-w-2xl text-sm text-ink/60">
+        Tracked manually on the{" "}
+        <a href="/admin/reservations" className="underline decoration-line underline-offset-4">
+          Reservations
+        </a>{" "}
+        page once an invoice is sent through your own accounting tool.
+      </p>
+      <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="rounded-card border border-line bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">
+            Invoiced, awaiting payment
+          </p>
+          <p className="mt-2 font-display text-2xl font-semibold text-ink">
+            {formatEur(invoicedAwaitingPayment)}
+          </p>
+        </div>
+        <div className="rounded-card border border-line bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">Paid</p>
+          <p className="mt-2 font-display text-2xl font-semibold text-olive">
+            {formatEur(paid)}
           </p>
         </div>
       </div>

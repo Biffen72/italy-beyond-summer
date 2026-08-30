@@ -34,3 +34,17 @@ export async function setReservationStatus(
   if (error) throw new Error(error.message);
   revalidatePath("/admin/reservations");
 }
+
+export async function setInvoiceStatus(
+  requestId: string,
+  invoiceStatus: "not_invoiced" | "invoiced" | "paid"
+) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase
+    .from("reservation_requests")
+    .update({ invoice_status: invoiceStatus })
+    .eq("id", requestId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/reservations");
+  revalidatePath("/admin/finance");
+}
