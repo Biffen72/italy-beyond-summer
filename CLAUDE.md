@@ -51,9 +51,10 @@ change, say in plain language what changed and what to check in the browser.
   bounces wrong-role users back to `/dashboard`.
 
 ## Design tokens (see tailwind.config.ts)
-- Colors: `wine` #7A2333 (primary), `ink` #1E2A22 (near-black text/dark bg),
-  `olive` #57643C, `gold` #BB8F2B, `paper` #FBF8EF (background), `line` #D8CBA6
-  (borders)
+- Colors: `wine` #8A1F2A (primary), `ink` #1E2A22 (near-black text/dark bg),
+  `olive` #3F6E44, `gold` #BB8F2B, `paper` #FBF8EF (background), `line` #D8CBA6
+  (borders) — wine/olive nudged toward true red/green for a bit more Italian
+  character (subtle, not a literal flag palette)
 - Fonts: `font-display` (Fraunces, serif — headings) / `font-body` (Inter —
   everything else)
 - These match the color language used in the pitch decks (Suppliers,
