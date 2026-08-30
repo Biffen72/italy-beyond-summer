@@ -39,29 +39,102 @@ export default async function SupplierProjectDetailPage({
     .maybeSingle();
   if (!myConfirmation) notFound();
 
-  const { data: myRooms } = await supabase
-    .from("project_rooms")
-    .select("id, room_type_label")
-    .eq("project_id", project.id)
-    .eq("supplier_id", supplierId)
-    .order("sort_order");
+  // A guide escorts the whole group, not one activity slot — so unlike
+  // every other category, their view isn't scoped to "rooms/days tagged
+  // to me." RLS already allows any confirmed supplier to read the full
+  // project (schema.sql:1218-1227 grants this at the project level, not
+  // per-room), so widening this is just a different query, not a new
+  // access grant.
+  const { data: mySupplier } = await supabase
+    .from("suppliers")
+    .select("category")
+    .eq("id", supplierId)
+    .maybeSingle();
+  const isGuide = mySupplier?.category === "Guide";
 
-  const isHotelForThisProject = (myRooms ?? []).length > 0;
+  type Guest = { id: string; room_id: string; full_name: string; allergies: string | null; email: string | null; mobile: string | null };
+  type Room = { id: string; room_type_label: string; supplier_id: string };
+  type Day = { day_number: number; title: string; description: string | null; time_of_day: string | null; supplier_id: string | null };
 
-  const { data: guests } = isHotelForThisProject
-    ? await supabase
-        .from("project_room_guests")
-        .select("id, room_id, full_name, allergies")
-        .in("room_id", (myRooms ?? []).map((r) => r.id))
-        .order("sort_order")
-    : { data: [] };
+  let rooms: Room[] = [];
+  let guests: Guest[] = [];
+  let days: Day[] = [];
+  const supplierNameById = new Map<string, string>();
 
-  const { data: myDays } = await supabase
-    .from("project_program_days")
-    .select("day_number, title, description, time_of_day")
-    .eq("project_id", project.id)
-    .eq("supplier_id", supplierId)
-    .order("day_number");
+  if (isGuide) {
+    const [{ data: allRooms }, { data: allDays }] = await Promise.all([
+      supabase
+        .from("project_rooms")
+        .select("id, room_type_label, supplier_id")
+        .eq("project_id", project.id)
+        .order("sort_order"),
+      supabase
+        .from("project_program_days")
+        .select("day_number, title, description, time_of_day, supplier_id")
+        .eq("project_id", project.id)
+        .order("day_number"),
+    ]);
+    rooms = allRooms ?? [];
+    days = allDays ?? [];
+
+    const { data: allGuests } =
+      rooms.length > 0
+        ? await supabase
+            .from("project_room_guests")
+            .select("id, room_id, full_name, email, mobile, allergies")
+            .in(
+              "room_id",
+              rooms.map((r) => r.id)
+            )
+            .order("sort_order")
+        : { data: [] };
+    guests = allGuests ?? [];
+
+    const supplierIds = [
+      ...new Set(
+        [...rooms.map((r) => r.supplier_id), ...days.map((d) => d.supplier_id)].filter(
+          (sid): sid is string => !!sid
+        )
+      ),
+    ];
+    const { data: suppliers } =
+      supplierIds.length > 0
+        ? await supabase.from("suppliers").select("id, name").in("id", supplierIds)
+        : { data: [] };
+    (suppliers ?? []).forEach((s) => supplierNameById.set(s.id, s.name));
+  } else {
+    const [{ data: myRooms }, { data: myDays }] = await Promise.all([
+      supabase
+        .from("project_rooms")
+        .select("id, room_type_label, supplier_id")
+        .eq("project_id", project.id)
+        .eq("supplier_id", supplierId)
+        .order("sort_order"),
+      supabase
+        .from("project_program_days")
+        .select("day_number, title, description, time_of_day, supplier_id")
+        .eq("project_id", project.id)
+        .eq("supplier_id", supplierId)
+        .order("day_number"),
+    ]);
+    rooms = myRooms ?? [];
+    days = myDays ?? [];
+
+    const { data: myGuests } =
+      rooms.length > 0
+        ? await supabase
+            .from("project_room_guests")
+            .select("id, room_id, full_name, allergies")
+            .in(
+              "room_id",
+              rooms.map((r) => r.id)
+            )
+            .order("sort_order")
+        : { data: [] };
+    guests = (myGuests ?? []).map((g) => ({ ...g, email: null, mobile: null }));
+  }
+
+  const isHotelForThisProject = !isGuide && rooms.length > 0;
 
   return (
     <main className="min-h-screen bg-paper">
@@ -86,21 +159,27 @@ export default async function SupplierProjectDetailPage({
           {project.group_size ? ` · group of ${project.group_size}` : ""}
         </p>
 
-        {isHotelForThisProject && (
+        {(isHotelForThisProject || (isGuide && rooms.length > 0)) && (
           <div className="mt-8 max-w-xl">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/60">
-              Rooms
+              {isGuide ? "Accommodation" : "Rooms"}
             </h2>
             <ul className="mt-3 space-y-3">
-              {(myRooms ?? []).map((room) => (
+              {rooms.map((room) => (
                 <li key={room.id} className="rounded-card border border-line bg-white p-4">
-                  <p className="font-semibold text-ink">{room.room_type_label}</p>
+                  <p className="font-semibold text-ink">
+                    {isGuide
+                      ? `${supplierNameById.get(room.supplier_id) ?? "Hotel"} — ${room.room_type_label}`
+                      : room.room_type_label}
+                  </p>
                   <ul className="mt-2 space-y-1 text-sm text-ink/80">
-                    {(guests ?? [])
+                    {guests
                       .filter((g) => g.room_id === room.id)
                       .map((g) => (
                         <li key={g.id}>
                           {g.full_name}
+                          {isGuide && g.email ? ` · ${g.email}` : ""}
+                          {isGuide && g.mobile ? ` · ${g.mobile}` : ""}
                           {g.allergies ? ` — Allergies: ${g.allergies}` : ""}
                         </li>
                       ))}
@@ -113,15 +192,17 @@ export default async function SupplierProjectDetailPage({
 
         <div className="mt-8 max-w-xl">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/60">
-            Your program
+            {isGuide ? "Full program" : "Your program"}
           </h2>
-          {!myDays || myDays.length === 0 ? (
+          {days.length === 0 ? (
             <p className="mt-3 text-sm text-ink/60">
-              No program day is tagged to you for this project.
+              {isGuide
+                ? "The program isn't ready yet."
+                : "No program day is tagged to you for this project."}
             </p>
           ) : (
             <ul className="mt-3 space-y-3">
-              {myDays.map((d) => (
+              {days.map((d) => (
                 <li key={d.day_number} className="rounded-card border border-line bg-white p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-wine">
                     Day {d.day_number}
@@ -129,6 +210,11 @@ export default async function SupplierProjectDetailPage({
                   </p>
                   <p className="mt-1 font-semibold text-ink">{d.title}</p>
                   {d.description && <p className="mt-1 text-sm text-ink/70">{d.description}</p>}
+                  {isGuide && d.supplier_id && supplierNameById.get(d.supplier_id) && (
+                    <p className="mt-2 text-sm text-ink/60">
+                      With: {supplierNameById.get(d.supplier_id)}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
