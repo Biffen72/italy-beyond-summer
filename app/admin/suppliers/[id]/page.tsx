@@ -28,7 +28,9 @@ export default async function AdminSupplierEditPage({
 
   const { data: supplier } = await supabase
     .from("suppliers")
-    .select("name, category, price_per_person, address, logo_url, star_rating, quality_rating")
+    .select(
+      "name, category, price_per_person, address, logo_url, star_rating, quality_rating, contact_phone"
+    )
     .eq("id", supplierId)
     .maybeSingle();
 
@@ -101,6 +103,7 @@ export default async function AdminSupplierEditPage({
             logoUrl: supplier.logo_url ?? null,
             starRating: supplier.star_rating ?? null,
             qualityRating: supplier.quality_rating ?? null,
+            contactPhone: supplier.contact_phone ?? "",
           }}
           initialImages={images ?? []}
           initialText={sourceTranslation ?? null}

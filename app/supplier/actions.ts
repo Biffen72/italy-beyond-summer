@@ -20,6 +20,7 @@ type SupplierDetailsInput = {
   logoUrl: string | null;
   starRating: number | null;
   qualityRating: number | null;
+  contactPhone: string;
 };
 
 // Allows either the supplier who owns this row, or an admin acting on
@@ -139,6 +140,7 @@ export async function updateSupplierDetails(input: SupplierDetailsInput) {
       logo_url: input.logoUrl,
       star_rating: input.starRating,
       quality_rating: input.qualityRating,
+      contact_phone: input.contactPhone || null,
     })
     .eq("id", input.supplierId);
 
