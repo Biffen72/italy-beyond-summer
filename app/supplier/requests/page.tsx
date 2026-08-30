@@ -4,6 +4,7 @@ import { REGION_LABEL } from "@/lib/regions";
 import { ConfirmButtons } from "./ConfirmButtons";
 import { resolveSupplierId } from "@/lib/viewAs";
 import { ViewAsBanner } from "@/components/ViewAsBanner";
+import { isOverdue } from "@/lib/confirmations";
 
 type ConfirmationItem = {
   confirmationId: string;
@@ -15,6 +16,7 @@ type ConfirmationItem = {
   groupSize: number | null;
   singleRoom: boolean;
   agencyName: string;
+  responseDeadline: string | null;
 };
 
 export default async function SupplierRequestsPage() {
@@ -38,7 +40,7 @@ export default async function SupplierRequestsPage() {
 
   const { data: confirmations } = await supabase
     .from("booking_supplier_confirmations")
-    .select("id, request_type, request_id, status")
+    .select("id, request_type, request_id, status, response_deadline")
     .eq("supplier_id", supplierId)
     .order("created_at", { ascending: false });
 
@@ -81,6 +83,7 @@ export default async function SupplierRequestsPage() {
           groupSize: r.group_size,
           singleRoom: r.single_room,
           agencyName: agency?.name ?? "Unknown agency",
+          responseDeadline: row.response_deadline,
         };
       }
 
@@ -97,6 +100,7 @@ export default async function SupplierRequestsPage() {
         groupSize: r.group_size,
         singleRoom: r.single_room,
         agencyName: agency?.name ?? "Unknown agency",
+        responseDeadline: row.response_deadline,
       };
     })
     .filter((item): item is ConfirmationItem => item !== null);
@@ -149,17 +153,35 @@ export default async function SupplierRequestsPage() {
               <p className="mt-3 text-sm text-ink/60">Nothing waiting on you right now.</p>
             ) : (
               <ul className="mt-3 space-y-3">
-                {awaiting.map((item) => (
-                  <li
-                    key={item.confirmationId}
-                    className="rounded-card border border-line bg-white p-4"
-                  >
-                    {requestDetails(item)}
-                    <div className="mt-3">
-                      <ConfirmButtons confirmationId={item.confirmationId} />
-                    </div>
-                  </li>
-                ))}
+                {awaiting.map((item) => {
+                  const overdue = isOverdue({
+                    status: item.myStatus,
+                    response_deadline: item.responseDeadline,
+                  });
+                  return (
+                    <li
+                      key={item.confirmationId}
+                      className="rounded-card border border-line bg-white p-4"
+                    >
+                      {requestDetails(item)}
+                      {item.responseDeadline && (
+                        <p className={`mt-1 text-xs font-semibold ${overdue ? "text-wine" : "text-ink/50"}`}>
+                          {overdue
+                            ? "Overdue — please respond as soon as you can"
+                            : `Respond by ${new Date(item.responseDeadline).toLocaleString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}`}
+                        </p>
+                      )}
+                      <div className="mt-3">
+                        <ConfirmButtons confirmationId={item.confirmationId} />
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

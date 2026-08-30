@@ -8,6 +8,12 @@ export type ConfirmationSummary = {
   yesCount: number;
 };
 
+export const SUPPLIER_RESPONSE_HOURS = 24;
+
+export function isOverdue(row: { status: string; response_deadline: string | null }) {
+  return row.status === "pending" && !!row.response_deadline && new Date(row.response_deadline) < new Date();
+}
+
 // One row per (request, supplier) asking "can you take this group on
 // these dates?" — called right after a reservation_requests /
 // custom_package_requests row is created, from the same agency session,
@@ -21,12 +27,15 @@ export async function createConfirmationRows(
 ) {
   if (supplierIds.length === 0) return;
 
+  const deadline = new Date(Date.now() + SUPPLIER_RESPONSE_HOURS * 60 * 60 * 1000).toISOString();
+
   const { error } = await supabase.from("booking_supplier_confirmations").insert(
     supplierIds.map((supplierId) => ({
       request_type: requestType,
       request_id: requestId,
       supplier_id: supplierId,
       status: "pending",
+      response_deadline: deadline,
     }))
   );
 
@@ -47,11 +56,20 @@ export async function getConfirmationSummaries(
   const requestIds = requests.map((r) => r.requestId);
   const { data } = await supabase
     .from("booking_supplier_confirmations")
-    .select("request_type, request_id, status")
+    .select("id, request_type, request_id, status, is_alternative_for")
     .in("request_id", requestIds);
 
+  const allRows = data ?? [];
+  // A row that another row's is_alternative_for points to has been
+  // replaced — it no longer represents an active supplier slot on the
+  // booking, so it's excluded from readiness math entirely.
+  const supersededIds = new Set(
+    allRows.filter((r) => r.is_alternative_for).map((r) => r.is_alternative_for as string)
+  );
+  const activeRows = allRows.filter((r) => !supersededIds.has(r.id));
+
   const rowsByKey = new Map<string, { status: string }[]>();
-  for (const row of data ?? []) {
+  for (const row of activeRows) {
     const key = `${row.request_type}:${row.request_id}`;
     const list = rowsByKey.get(key) ?? [];
     list.push(row);

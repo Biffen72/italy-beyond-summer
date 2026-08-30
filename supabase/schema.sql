@@ -1247,3 +1247,25 @@ create policy "Suppliers can read program days on submitted projects they're par
       where status = 'submitted' and fn_supplier_has_confirmation(request_type, request_id)
     )
   );
+
+-- ─────────────────────────────────────────────────────────────
+-- Stage V: supplier response deadlines + alternative-supplier loop
+-- (phase 2 of the booking roadmap). A confirmation request now carries a
+-- deadline, and a declined confirmation can be superseded by a new one
+-- for an alternative supplier — is_alternative_for links the replacement
+-- back to the original so getConfirmationSummaries can exclude superseded
+-- rows from readiness (a replaced decline shouldn't permanently block
+-- booking once its replacement is in progress or approved).
+-- ─────────────────────────────────────────────────────────────
+alter table booking_supplier_confirmations
+  add column if not exists response_deadline timestamptz,
+  add column if not exists is_alternative_for uuid references booking_supplier_confirmations (id);
+
+-- Proposing an alternative supplier inserts a new confirmation row from the
+-- admin's own session, which the existing insert policy (scoped to the
+-- agency owning the request) doesn't cover.
+drop policy if exists "Admins can create confirmations" on booking_supplier_confirmations;
+create policy "Admins can create confirmations"
+  on booking_supplier_confirmations for insert
+  to authenticated
+  with check ((select role from profiles where profiles.id = auth.uid()) = 'admin');
