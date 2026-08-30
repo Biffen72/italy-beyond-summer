@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { computePackageTotalEur } from "@/lib/pricing";
 import { getConfirmationSummaries } from "@/lib/confirmations";
+import { daysAgoLabel, daysSince, STALE_REQUEST_DAYS } from "@/lib/dateAge";
 import { REGION_LABEL } from "@/lib/regions";
 import { SupplierRatingBadge } from "@/components/SupplierRatingBadge";
 import { setCustomRequestStatus } from "./actions";
@@ -117,6 +118,16 @@ export default async function AdminCustomRequestsPage() {
 
               <p className="mt-3 text-sm text-ink/80">
                 Status: {STATUS_LABEL[r.status] ?? r.status}
+                {" · "}
+                <span
+                  className={
+                    r.status === "pending" && daysSince(r.created_at) >= STALE_REQUEST_DAYS
+                      ? "font-semibold text-wine"
+                      : "text-ink/60"
+                  }
+                >
+                  {daysAgoLabel(r.created_at)}
+                </span>
               </p>
 
               <div className="mt-4 flex gap-3">
